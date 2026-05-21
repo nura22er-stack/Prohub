@@ -1,0 +1,17 @@
+[Unit]
+Description=ProHub Telegram Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=prohub
+Group=prohub
+WorkingDirectory=/opt/prohub-bot
+EnvironmentFile=/etc/prohub-bot.env
+ExecStart=/opt/prohub-bot/venv/bin/python -m bot.main
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

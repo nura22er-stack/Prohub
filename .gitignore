@@ -40,6 +40,8 @@ env/
 # Environment
 .env
 .env.local
+*.env.local
+prohub-bot.env
 
 # Logs
 *.log

@@ -25,14 +25,14 @@ fi
 source venv/bin/activate
 
 # Install requirements
-pip install -q -r requirements.txt
+pip install -q -r requirements-dev.txt
 
 echo ""
 echo "Starting ProHub Bot services..."
 echo ""
 
 # Start bot
-python3 bot/main.py &
+python3 -m bot.main &
 BOT_PID=$!
 
 # Start API

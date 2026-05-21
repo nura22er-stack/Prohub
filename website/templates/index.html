@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProHub Bot - Premium ilovalar</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="background"></div>
+    
+    <header>
+        <div class="container">
+            <div class="logo">
+                <h1>🚀 ProHub Bot</h1>
+                <p>Premium va MOD ilovalarni bepul yuklash</p>
+            </div>
+            <nav>
+                <a href="#apps" class="nav-link">Ilovalar</a>
+                <a href="#stats" class="nav-link">Statistika</a>
+                <a href="#about" class="nav-link">Haqida</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container">
+                <h2>🎉 Sifatli ilovalarni bepul oling!</h2>
+                <p>Telegram botimizdan 1000+ premium ilovani yuklang</p>
+                <a href="https://t.me/ProHubBot" class="btn btn-primary">🤖 Botga o'tish</a>
+            </div>
+        </section>
+
+        <section id="stats" class="stats">
+            <div class="container">
+                <h2>📊 Statistika</h2>
+                <div class="stats-grid">
+                    <div class="stat-card glass">
+                        <div class="stat-icon">📱</div>
+                        <div class="stat-value" id="app-count">0</div>
+                        <div class="stat-label">Ilovalar</div>
+                    </div>
+                    <div class="stat-card glass">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-value" id="user-count">0</div>
+                        <div class="stat-label">Foydalanuvchilar</div>
+                    </div>
+                    <div class="stat-card glass">
+                        <div class="stat-icon">📥</div>
+                        <div class="stat-value" id="download-count">0</div>
+                        <div class="stat-label">Yuklanishlar</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="apps" class="apps">
+            <div class="container">
+                <h2>🔥 Eng ko'p yuklanganlar</h2>
+                <div id="top-apps" class="apps-grid">
+                    <!-- Apps will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <section class="features">
+            <div class="container">
+                <h2>✨ Xususiyatlari</h2>
+                <div class="features-grid">
+                    <div class="feature-card glass">
+                        <h3>🔐 Xavfsiz</h3>
+                        <p>Barcha ilovalar tekshirilgan va xavfsiz</p>
+                    </div>
+                    <div class="feature-card glass">
+                        <h3>⚡ Tez</h3>
+                        <p>1-sek ichida ilovani yuklab oling</p>
+                    </div>
+                    <div class="feature-card glass">
+                        <h3>👥 Referal</h3>
+                        <p>Do'stlaringizni taklif qiling va bonus oling</p>
+                    </div>
+                    <div class="feature-card glass">
+                        <h3>📱 Qulay</h3>
+                        <p>Telegram orqali barcha narsani qiling</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="about" class="about">
+            <div class="container">
+                <h2>ℹ️ Bot haqida</h2>
+                <p>ProHub Bot - bu Telegram orqali premium va MOD ilovalarni tarqatish uchun to'liq tizim. 
+                   Botda majburiy obuna, referal tizim, admin panel, va veb-sayt bilan integratsiya mavjud.</p>
+                <p><strong>Asosiy afzalliklari:</strong></p>
+                <ul>
+                    <li>✅ Xavfsiz va ishonchli</li>
+                    <li>📱 Qulay interfeysya</li>
+                    <li>📊 Kengaytirilgan statistika</li>
+                    <li>🎯 Samarali referal tizim</li>
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 ProHub Bot. Barcha huquqlar himoyalangan.</p>
+            <p><a href="https://t.me/ProHubBot">🤖 Telegram Bot</a></p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

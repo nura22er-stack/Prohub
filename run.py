@@ -12,7 +12,7 @@ from pathlib import Path
 def run_bot():
     """Run Telegram bot"""
     print("🤖 Starting ProHub Bot...")
-    subprocess.Popen([sys.executable, 'bot/main.py'])
+    subprocess.Popen([sys.executable, '-m', 'bot.main'])
 
 def run_api():
     """Run API server"""

@@ -26,7 +26,7 @@ REM Activate venv
 call venv\Scripts\activate.bat
 
 REM Install requirements if needed
-pip install -q -r requirements.txt
+pip install -q -r requirements-dev.txt
 
 echo.
 echo Starting ProHub Bot services...
@@ -35,7 +35,7 @@ echo Note: These are running in separate windows. Close each to stop them.
 echo.
 
 REM Start bot in new window
-start "ProHub Bot" python bot\main.py
+start "ProHub Bot" python -m bot.main
 
 REM Start API in new window
 timeout /t 2 /nobreak
