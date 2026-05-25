@@ -45,6 +45,7 @@ prohub-bot.env
 
 # Logs
 *.log
+*.zip
 
 # Data
 data/bot_data.json

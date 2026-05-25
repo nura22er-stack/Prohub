@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: prohub-bot
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: python run.py
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: BOT_TOKEN
+        sync: false
+      - key: BOT_USERNAME
+        sync: false
+      - key: REQUIRED_CHANNEL
+        sync: false
+      - key: CHANNEL_ID
+        sync: false
+      - key: ADMIN_ID
+        sync: false
+      - key: APPS_PER_PAGE
+        value: "10"
+      - key: DATA_FILE
+        value: /var/data/bot_data.json
+    disk:
+      name: prohub-data
+      mountPath: /var/data
+      sizeGB: 1
