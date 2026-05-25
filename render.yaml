@@ -4,7 +4,7 @@ services:
     runtime: python
     plan: starter
     buildCommand: pip install -r requirements.txt
-    startCommand: python run.py
+    startCommand: gunicorn webhook_server:flask_app --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 120
     healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
@@ -21,6 +21,8 @@ services:
         sync: false
       - key: APPS_PER_PAGE
         value: "10"
+      - key: WEBHOOK_PATH
+        value: telegram-webhook
       - key: DATA_FILE
         value: /var/data/bot_data.json
     disk:

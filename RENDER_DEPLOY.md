@@ -2,8 +2,8 @@
 
 Bu loyiha Render'da **Web Service** sifatida ishlaydi:
 
-- `python run.py` Telegram botni ishga tushiradi.
-- `api/app.py` Render bergan `PORT` ga bind bo'ladi.
+- `gunicorn webhook_server:flask_app ...` Render bergan `PORT` ga bind bo'ladi.
+- Telegram bot polling emas, webhook orqali ishlaydi.
 - `/health` endpoint Render health check uchun javob beradi.
 
 ## 1. GitHub'ga yuklash
@@ -37,7 +37,7 @@ pip install -r requirements.txt
 Start command:
 
 ```bash
-python run.py
+gunicorn webhook_server:flask_app --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 120
 ```
 
 Environment variables:
@@ -50,6 +50,7 @@ REQUIRED_CHANNEL=...
 CHANNEL_ID=...
 ADMIN_ID=...
 APPS_PER_PAGE=10
+WEBHOOK_PATH=telegram-webhook
 DATA_FILE=/var/data/bot_data.json
 ```
 

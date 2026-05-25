@@ -1004,8 +1004,8 @@ async def get_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text("❌ Xato!")
 
 
-def main():
-    """Start the bot"""
+def build_application():
+    """Build and configure the Telegram bot application."""
     app = Application.builder().token(BOT_TOKEN).build()
     
     # Commands
@@ -1043,6 +1043,13 @@ def main():
     
     # Message handlers
     app.add_handler(MessageHandler((filters.TEXT | filters.PHOTO | filters.Document.ALL) & ~filters.COMMAND, handle_text_input))
+
+    return app
+
+
+def main():
+    """Start the bot with polling for local development."""
+    app = build_application()
     
     # Start polling
     app.run_polling()
