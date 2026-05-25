@@ -15,6 +15,17 @@ CORS(app)
 db = Database()
 
 
+@app.route('/', methods=['GET'])
+def index():
+    """Basic deployment status page."""
+    return jsonify({
+        "service": "ProHub Bot",
+        "status": "ok",
+        "health": "/health",
+        "stats": "/api/stats"
+    })
+
+
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
     """Get bot statistics"""

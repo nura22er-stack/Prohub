@@ -13,7 +13,7 @@ import sys
 import time
 
 
-processes = []
+processes = {}
 
 
 def has_render_env():
@@ -22,30 +22,39 @@ def has_render_env():
 
 
 def validate_config():
-    """Fail early with clear messages for missing required settings."""
+    """Warn clearly for missing settings without killing the web health server."""
     if os.path.exists(".env"):
-        return
+        return True
 
     if not has_render_env():
         print("Error: .env file not found!")
         print("Local run uchun .env.example ni .env ga nusxalang va to'ldiring.")
         sys.exit(1)
 
-    missing = [name for name in ("BOT_TOKEN", "ADMIN_ID") if not os.getenv(name)]
+    missing = [name for name in ("BOT_TOKEN",) if not os.getenv(name)]
     if missing:
-        print("Error: required Render environment variables are missing:")
+        print("Warning: required Render environment variables are missing:")
         for name in missing:
             print(f"- {name}")
-        sys.exit(1)
+        print("Web health server will still start, but the Telegram bot is paused.")
+        return False
+
+    if not os.getenv("ADMIN_ID"):
+        print("Warning: ADMIN_ID is not set. Bot will start, but admin access is disabled.", flush=True)
+
+    return True
 
 
 def start_process(name, command):
     print(f"Starting {name}: {' '.join(command)}", flush=True)
     process = subprocess.Popen(command)
-    processes.append((name, process))
+    processes[name] = process
 
 
 def run_bot():
+    if not os.getenv("BOT_TOKEN"):
+        print("Telegram bot skipped: BOT_TOKEN is not set.", flush=True)
+        return
     start_process("Telegram bot", [sys.executable, "-m", "bot.main"])
 
 
@@ -57,11 +66,11 @@ def run_api():
 
 def shutdown(signum=None, frame=None):
     print("Shutting down services...", flush=True)
-    for _, process in processes:
+    for process in processes.values():
         if process.poll() is None:
             process.terminate()
 
-    for _, process in processes:
+    for process in processes.values():
         try:
             process.wait(timeout=10)
         except subprocess.TimeoutExpired:
@@ -70,20 +79,37 @@ def shutdown(signum=None, frame=None):
     sys.exit(0)
 
 
+def restart_bot_if_needed():
+    process = processes.get("Telegram bot")
+    if process is None:
+        return
+
+    code = process.poll()
+    if code is None:
+        return
+
+    print(f"Telegram bot exited with code {code}. Restarting in 30 seconds...", flush=True)
+    time.sleep(30)
+    run_bot()
+
+
 if __name__ == "__main__":
-    validate_config()
+    bot_configured = validate_config()
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
 
     print("ProHub Bot - Starting services...", flush=True)
-    run_bot()
     run_api()
+    if bot_configured:
+        run_bot()
     print("All services started.", flush=True)
 
     while True:
-        for name, process in processes:
-            code = process.poll()
-            if code is not None:
-                print(f"{name} exited with code {code}.", flush=True)
+        api_process = processes.get("API/health server")
+        if api_process is not None:
+            api_code = api_process.poll()
+            if api_code is not None:
+                print(f"API/health server exited with code {api_code}.", flush=True)
                 shutdown()
+        restart_bot_if_needed()
         time.sleep(1)
