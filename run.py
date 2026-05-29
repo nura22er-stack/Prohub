@@ -61,7 +61,23 @@ def run_bot():
 def run_api():
     port = os.getenv("PORT") or os.getenv("API_PORT") or "5000"
     print(f"API/health server will bind to port {port}.", flush=True)
-    start_process("API/health server", [sys.executable, "api/app.py"])
+    start_process(
+        "API/health server",
+        [
+            sys.executable,
+            "-m",
+            "gunicorn",
+            "api.app:app",
+            "--bind",
+            f"0.0.0.0:{port}",
+            "--workers",
+            "1",
+            "--threads",
+            "8",
+            "--timeout",
+            "120",
+        ],
+    )
 
 
 def shutdown(signum=None, frame=None):
