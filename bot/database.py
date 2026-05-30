@@ -249,6 +249,9 @@ class Database:
 
     def is_admin(self, user_id: int) -> bool:
         """Check if user is a configured admin"""
+        if ADMIN_ID and str(user_id) == str(ADMIN_ID):
+            return True
+
         data = self.load_data()
         return str(user_id) in data["admins"]
 

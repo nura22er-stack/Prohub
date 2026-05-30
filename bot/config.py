@@ -14,10 +14,10 @@ def get_int_env(name: str, default: int) -> int:
 
 # Telegram Configuration
 BOT_TOKEN = os.getenv('BOT_TOKEN')
-BOT_USERNAME = os.getenv('BOT_USERNAME', '@ProHubBot')
-REQUIRED_CHANNEL = os.getenv('REQUIRED_CHANNEL', '@ProHubChannel')
-CHANNEL_ID = get_int_env('CHANNEL_ID', -1001234567890)
-ADMIN_ID = get_int_env('ADMIN_ID', 0)
+BOT_USERNAME = os.getenv('BOT_USERNAME', '@prohub_robot')
+REQUIRED_CHANNEL = os.getenv('REQUIRED_CHANNEL', '@premiumilova202')
+CHANNEL_ID = get_int_env('CHANNEL_ID', -1003825980145)
+ADMIN_ID = get_int_env('ADMIN_ID', 8243876799)
 APPS_PER_PAGE = get_int_env('APPS_PER_PAGE', 10)
 
 # Database
