@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 """Render web service entry point for Telegram webhook mode."""
 
-import asyncio
 import logging
 import os
-import threading
 
 from flask import Flask, jsonify, request
 from telegram import Update
@@ -21,9 +19,7 @@ logger = logging.getLogger(__name__)
 
 flask_app = Flask(__name__)
 
-telegram_app = None
-telegram_loop = None
-telegram_ready = threading.Event()
+telegram_updater = None
 telegram_error = None
 
 
@@ -47,49 +43,33 @@ def get_webhook_url() -> str:
     return ""
 
 
-async def start_telegram_application():
-    global telegram_app, telegram_error
+def start_telegram_application():
+    global telegram_updater, telegram_error
 
     try:
-        telegram_app = build_application()
-        await telegram_app.initialize()
-        await telegram_app.start()
+        telegram_updater = build_application()
 
         webhook_url = get_webhook_url()
         if webhook_url:
-            await telegram_app.bot.set_webhook(
+            telegram_updater.bot.set_webhook(
                 url=webhook_url,
-                allowed_updates=Update.ALL_TYPES,
                 drop_pending_updates=True,
             )
             logger.info("Telegram webhook set to %s", webhook_url)
         else:
             logger.warning("WEBHOOK_URL or RENDER_EXTERNAL_URL is missing; webhook was not set.")
 
-        telegram_ready.set()
     except Exception as exc:
         telegram_error = str(exc)
         logger.exception("Telegram application failed to start")
-        telegram_ready.set()
-
-
-def run_telegram_loop():
-    global telegram_loop
-
-    telegram_loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(telegram_loop)
-    telegram_loop.create_task(start_telegram_application())
-    telegram_loop.run_forever()
 
 
 def ensure_telegram_started():
     if not BOT_TOKEN:
         logger.warning("BOT_TOKEN is missing; Telegram webhook is disabled.")
-        telegram_ready.set()
         return
 
-    thread = threading.Thread(target=run_telegram_loop, daemon=True)
-    thread.start()
+    start_telegram_application()
 
 
 ensure_telegram_started()
@@ -101,7 +81,7 @@ def index():
         "service": "ProHub Bot",
         "status": "ok",
         "mode": "webhook",
-        "telegram_ready": telegram_ready.is_set() and telegram_error is None and bool(BOT_TOKEN),
+        "telegram_ready": telegram_updater is not None and telegram_error is None and bool(BOT_TOKEN),
         "telegram_error": telegram_error,
         "health": "/health",
         "webhook_path": f"/{get_webhook_path()}",
@@ -112,7 +92,7 @@ def index():
 def health():
     return jsonify({
         "status": "ok",
-        "telegram_ready": telegram_ready.is_set() and telegram_error is None and bool(BOT_TOKEN),
+        "telegram_ready": telegram_updater is not None and telegram_error is None and bool(BOT_TOKEN),
     })
 
 
@@ -121,18 +101,14 @@ def telegram_webhook():
     if not BOT_TOKEN:
         return jsonify({"ok": False, "error": "BOT_TOKEN is missing"}), 503
 
-    if not telegram_ready.wait(timeout=15):
-        return jsonify({"ok": False, "error": "Telegram app is still starting"}), 503
-
     if telegram_error:
         return jsonify({"ok": False, "error": telegram_error}), 500
 
-    if telegram_app is None or telegram_loop is None:
+    if telegram_updater is None:
         return jsonify({"ok": False, "error": "Telegram app is not initialized"}), 500
 
-    update = Update.de_json(request.get_json(force=True), telegram_app.bot)
-    future = asyncio.run_coroutine_threadsafe(telegram_app.update_queue.put(update), telegram_loop)
-    future.result(timeout=15)
+    update = Update.de_json(request.get_json(force=True), telegram_updater.bot)
+    telegram_updater.dispatcher.process_update(update)
     return jsonify({"ok": True})
 
 

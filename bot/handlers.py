@@ -1,8 +1,6 @@
-import asyncio
 import requests
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.constants import ChatAction
-from telegram.ext import ContextTypes
+from telegram import ChatAction, Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import CallbackContext
 
 from .config import BOT_USERNAME
 from .database import Database
@@ -10,7 +8,7 @@ from .database import Database
 db = Database()
 
 
-async def check_subscription(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
+def check_subscription(user_id: int, context: CallbackContext) -> bool:
     """Check if user is subscribed to required channel"""
     channels = db.get_required_channels()
     if not channels:
@@ -18,7 +16,7 @@ async def check_subscription(user_id: int, context: ContextTypes.DEFAULT_TYPE) -
 
     for channel in channels:
         try:
-            member = await context.bot.get_chat_member(channel["id"], user_id)
+            member = context.bot.get_chat_member(channel["id"], user_id)
             if member.status not in ['member', 'administrator', 'creator']:
                 return False
         except:
@@ -106,14 +104,14 @@ def get_back_button() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(keyboard)
 
 
-async def send_typing_action(context: ContextTypes.DEFAULT_TYPE, chat_id: int):
+def send_typing_action(context: CallbackContext, chat_id: int):
     """Send typing action"""
-    await context.bot.send_chat_action(chat_id, ChatAction.TYPING)
+    context.bot.send_chat_action(chat_id, ChatAction.TYPING)
 
 
-async def send_document_action(context: ContextTypes.DEFAULT_TYPE, chat_id: int):
+def send_document_action(context: CallbackContext, chat_id: int):
     """Send upload_document action"""
-    await context.bot.send_chat_action(chat_id, ChatAction.UPLOAD_DOCUMENT)
+    context.bot.send_chat_action(chat_id, ChatAction.UPLOAD_DOCUMENT)
 
 
 def generate_referral_link(user_id: int) -> str:
@@ -131,7 +129,7 @@ def parse_referral_code(deep_link: str) -> int:
     return None
 
 
-async def send_to_channel(context: ContextTypes.DEFAULT_TYPE, app: dict) -> bool:
+def send_to_channel(context: CallbackContext, app: dict) -> bool:
     """Send app announcement to channel"""
     channels = db.get_required_channels()
     sent = False
@@ -142,7 +140,7 @@ async def send_to_channel(context: ContextTypes.DEFAULT_TYPE, app: dict) -> bool
 
         for channel in channels:
             try:
-                await context.bot.send_photo(
+                context.bot.send_photo(
                     chat_id=channel["id"],
                     photo=app['image'],
                     caption=caption,

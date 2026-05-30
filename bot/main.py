@@ -1,7 +1,15 @@
 import logging
 import random
 from telegram import Update, File, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes, ConversationHandler
+from telegram.ext import (
+    Updater,
+    CallbackContext,
+    CommandHandler,
+    CallbackQueryHandler,
+    MessageHandler,
+    Filters,
+    ConversationHandler,
+)
 
 from .config import BOT_TOKEN, APPS_PER_PAGE
 from .database import Database
@@ -48,7 +56,7 @@ def parse_channel_input(text: str) -> tuple:
 
 
 # ==================== START COMMAND ====================
-async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def start_command(update: Update, context: CallbackContext):
     """Handle /start command"""
     user = update.effective_user
     message = update.message
@@ -64,16 +72,16 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             db.set_referrer(user.id, referrer_id)
     
     # Check subscription
-    is_subscribed = await check_subscription(user.id, context)
+    is_subscribed = check_subscription(user.id, context)
     
     if not is_subscribed:
-        await message.reply_text(
+        message.reply_text(
             f"👋 Salom, {user.first_name}!\n\n"
             "🔐 Botdan foydalanish uchun avval kanalga obuna bo'lishingiz kerak.",
             reply_markup=get_subscription_keyboard()
         )
     else:
-        await message.reply_text(
+        message.reply_text(
             f"👋 Salom, {user.first_name}! 🎉\n\n"
             "Premium va MOD ilovalarni bepul yuklash botiga xush kelibsiz!",
             reply_markup=get_main_menu_keyboard()
@@ -81,11 +89,11 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ==================== MAIN MENU ====================
-async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def main_menu(update: Update, context: CallbackContext):
     """Show main menu"""
     query = update.callback_query
-    await query.answer()
-    await query.edit_message_text(
+    query.answer()
+    query.edit_message_text(
         "🏠 <b>Asosiy menyu</b>\n\n"
         "Quyidagi tugmalardan biri tanlang:",
         reply_markup=get_main_menu_keyboard(),
@@ -94,7 +102,7 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ==================== LIST APPS ====================
-async def list_apps(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def list_apps(update: Update, context: CallbackContext):
     """Show apps with pagination"""
     query = update.callback_query
     
@@ -102,12 +110,12 @@ async def list_apps(update: Update, context: ContextTypes.DEFAULT_TYPE):
     callback_data = query.data
     page = int(callback_data.split('_')[-1])
     
-    await query.answer()
+    query.answer()
     
     apps, total_pages = db.get_apps_paginated(page, APPS_PER_PAGE)
     
     if not apps:
-        await query.edit_message_text(
+        query.edit_message_text(
             "❌ Ilovalar topilmadi.",
             reply_markup=get_back_button()
         )
@@ -117,7 +125,7 @@ async def list_apps(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for app in apps:
         text += f"🔹 <b>{app['name']}</b> (📥 {app['downloads']})\n"
     
-    await query.edit_message_text(
+    query.edit_message_text(
         text,
         reply_markup=get_apps_keyboard(apps, page, total_pages),
         parse_mode='HTML'
@@ -125,15 +133,15 @@ async def list_apps(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ==================== TOP APPS ====================
-async def top_apps(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def top_apps(update: Update, context: CallbackContext):
     """Show top downloaded apps"""
     query = update.callback_query
-    await query.answer()
+    query.answer()
     
     apps = db.get_top_apps(5)
     
     if not apps:
-        await query.edit_message_text(
+        query.edit_message_text(
             "❌ Ilovalar topilmadi.",
             reply_markup=get_back_button()
         )
@@ -154,7 +162,7 @@ async def top_apps(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard.append([InlineKeyboardButton("⬅️ Bosh menyu", callback_data="main_menu")])
     
     from telegram import InlineKeyboardMarkup
-    await query.edit_message_text(
+    query.edit_message_text(
         text,
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode='HTML'
@@ -162,15 +170,15 @@ async def top_apps(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ==================== RANDOM APP ====================
-async def random_app(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def random_app(update: Update, context: CallbackContext):
     """Send random app suggestion"""
     query = update.callback_query
-    await query.answer()
+    query.answer()
     
     apps = db.get_all_apps()
     
     if not apps:
-        await query.edit_message_text(
+        query.edit_message_text(
             "❌ Ilovalar topilmadi.",
             reply_markup=get_back_button()
         )
@@ -190,7 +198,7 @@ async def random_app(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("⬅️ Bosh menyu", callback_data="main_menu")]
     ]
     
-    await query.edit_message_text(
+    query.edit_message_text(
         text,
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode='HTML'
@@ -198,7 +206,7 @@ async def random_app(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ==================== DOWNLOAD ====================
-async def download_app(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def download_app(update: Update, context: CallbackContext):
     """Download app"""
     query = update.callback_query
     
@@ -207,34 +215,34 @@ async def download_app(update: Update, context: ContextTypes.DEFAULT_TYPE):
     app = db.get_app_by_code(app_code)
     
     if not app:
-        await query.answer("❌ Ilova topilmadi!")
+        query.answer("❌ Ilova topilmadi!")
         return
 
-    is_subscribed = await check_subscription(query.from_user.id, context)
+    is_subscribed = check_subscription(query.from_user.id, context)
     if not is_subscribed:
-        await query.answer("❌ Avval majburiy kanallarga obuna bo'ling!", show_alert=True)
-        await query.edit_message_text(
+        query.answer("❌ Avval majburiy kanallarga obuna bo'ling!", show_alert=True)
+        query.edit_message_text(
             "🔐 Botdan foydalanish uchun avval majburiy kanallarga obuna bo'lishingiz kerak.",
             reply_markup=get_subscription_keyboard()
         )
         return
     
-    await query.answer()
-    await send_document_action(context, query.from_user.id)
+    query.answer()
+    send_document_action(context, query.from_user.id)
     
     # Increment download count
     db.increment_download(app_code, query.from_user.id)
     
     # Send file
     try:
-        await context.bot.send_document(
+        context.bot.send_document(
             chat_id=query.from_user.id,
             document=app['file_id'],
             caption=f"✅ <b>{app['name']}</b> yuklandi!\n\n"
                    f"📊 Jami yuklanishlar: {db.get_app_by_code(app_code)['downloads']}",
             parse_mode='HTML'
         )
-        await query.edit_message_text(
+        query.edit_message_text(
             f"✅ Fayl yuborildi!\n\n"
             f"📱 <b>{app['name']}</b> yuklab olinmoqda...\n"
             f"Fayl to'g'ridan-to'g'ri sizga yuborildi.",
@@ -243,19 +251,19 @@ async def download_app(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except Exception as e:
         logger.error(f"Error sending file: {e}")
-        await query.edit_message_text(
+        query.edit_message_text(
             "❌ Xato! Fayl yuborilmadi.",
             reply_markup=get_back_button()
         )
 
 
 # ==================== SEARCH ====================
-async def search_app(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def search_app(update: Update, context: CallbackContext):
     """Start search process"""
     query = update.callback_query
-    await query.answer()
+    query.answer()
     
-    await query.edit_message_text(
+    query.edit_message_text(
         "🔍 <b>Qidiruv</b>\n\n"
         "Ilova nomini yoki kodini kiriting:",
         reply_markup=get_back_button(),
@@ -266,7 +274,7 @@ async def search_app(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.set_user_state(query.from_user.id, {"action": "waiting_for_search"})
 
 
-async def handle_search_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def handle_search_input(update: Update, context: CallbackContext):
     """Handle search input"""
     message = update.message
     user_state = db.get_user_state(message.from_user.id)
@@ -279,7 +287,7 @@ async def handle_search_input(update: Update, context: ContextTypes.DEFAULT_TYPE
     # Search by code first
     app = db.get_app_by_code(search_query)
     if app:
-        await send_typing_action(context, message.from_user.id)
+        send_typing_action(context, message.from_user.id)
         text = f"📱 <b>Qidiruv natijasi</b>\n\n"
         text += f"📦 <b>{app['name']}</b>\n"
         text += f"📥 Yuklanishlar: {app['downloads']}\n"
@@ -291,7 +299,7 @@ async def handle_search_input(update: Update, context: ContextTypes.DEFAULT_TYPE
             [InlineKeyboardButton("⬅️ Bosh menyu", callback_data="main_menu")]
         ]
         
-        await message.reply_text(
+        message.reply_text(
             text,
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode='HTML'
@@ -303,7 +311,7 @@ async def handle_search_input(update: Update, context: ContextTypes.DEFAULT_TYPE
     apps = db.get_app_by_name(search_query)
     
     if not apps:
-        await message.reply_text(
+        message.reply_text(
             f"❌ \"{search_query}\" bo'yicha ilovalar topilmadi.",
             reply_markup=get_back_button()
         )
@@ -323,7 +331,7 @@ async def handle_search_input(update: Update, context: ContextTypes.DEFAULT_TYPE
         ])
     keyboard.append([InlineKeyboardButton("⬅️ Bosh menyu", callback_data="main_menu")])
     
-    await message.reply_text(
+    message.reply_text(
         text,
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode='HTML'
@@ -333,15 +341,15 @@ async def handle_search_input(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 # ==================== MY DOWNLOADS ====================
-async def my_downloads(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def my_downloads(update: Update, context: CallbackContext):
     """Show user's download history"""
     query = update.callback_query
-    await query.answer()
+    query.answer()
     
     user = db.get_user(query.from_user.id)
     
     if not user or not user["downloads"]:
-        await query.edit_message_text(
+        query.edit_message_text(
             "📥 Hali ilovalar yuklab olmagansiz.",
             reply_markup=get_back_button()
         )
@@ -364,7 +372,7 @@ async def my_downloads(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     keyboard.append([InlineKeyboardButton("⬅️ Bosh menyu", callback_data="main_menu")])
     
-    await query.edit_message_text(
+    query.edit_message_text(
         text,
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode='HTML'
@@ -372,10 +380,10 @@ async def my_downloads(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ==================== REFERRAL ====================
-async def referral_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def referral_link(update: Update, context: CallbackContext):
     """Show referral link"""
     query = update.callback_query
-    await query.answer()
+    query.answer()
     
     referral_link = generate_referral_link(query.from_user.id)
     referrals = db.get_referrals(query.from_user.id)
@@ -392,7 +400,7 @@ async def referral_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("⬅️ Bosh menyu", callback_data="main_menu")]
     ]
     
-    await query.edit_message_text(
+    query.edit_message_text(
         text,
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode='HTML'
@@ -400,10 +408,10 @@ async def referral_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ==================== HELP ====================
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def help_command(update: Update, context: CallbackContext):
     """Show help"""
     query = update.callback_query
-    await query.answer()
+    query.answer()
     
     text = "ℹ️ <b>Yordam</b>\n\n"
     text += "<b>Bot haqida:</b>\n"
@@ -418,7 +426,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text += "• Do'stlaringizni taklif qiling 👥 va qimmatli ilovalarni oching!\n"
     text += "• Bot haqida masalalar? Ruxsat etuvchi bilan bog'lanish.\n"
     
-    await query.edit_message_text(
+    query.edit_message_text(
         text,
         reply_markup=get_back_button(),
         parse_mode='HTML'
@@ -426,20 +434,20 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ==================== ADMIN PANEL ====================
-async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def admin_command(update: Update, context: CallbackContext):
     """Handle /admin command"""
     message = update.message
     user_id = message.from_user.id
     
     if not db.is_admin(user_id):
-        await message.reply_text("❌ Siz admin emassiz!")
+        message.reply_text("❌ Siz admin emassiz!")
         return
     
     # Set admin session
     from .config import ADMIN_SESSION_TIMEOUT
     db.set_admin_session(user_id, ADMIN_SESSION_TIMEOUT)
     
-    await message.reply_text(
+    message.reply_text(
         "🔧 <b>Admin Panel</b>\n\n"
         "Xush kelibsiz, admin!",
         reply_markup=get_admin_menu_keyboard(),
@@ -447,38 +455,38 @@ async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def admin_menu(update: Update, context: CallbackContext):
     """Show admin menu"""
     query = update.callback_query
     user_id = query.from_user.id
     
     if not db.is_admin(user_id):
-        await query.answer("❌ Siz admin emassiz!", show_alert=True)
+        query.answer("❌ Siz admin emassiz!", show_alert=True)
         return
     
     if not db.is_admin_authenticated(user_id):
-        await query.answer("⏱ Sessiya tugadi! /admin bilan qayta kiringi", show_alert=True)
+        query.answer("⏱ Sessiya tugadi! /admin bilan qayta kiringi", show_alert=True)
         return
     
-    await query.answer()
-    await query.edit_message_text(
+    query.answer()
+    query.edit_message_text(
         "🔧 <b>Admin Panel</b>",
         reply_markup=get_admin_menu_keyboard(),
         parse_mode='HTML'
     )
 
 
-async def admin_add_app(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def admin_add_app(update: Update, context: CallbackContext):
     """Start adding new app"""
     query = update.callback_query
     user_id = query.from_user.id
     
     if not db.is_admin(user_id) or not db.is_admin_authenticated(user_id):
-        await query.answer("⏱ Sessiya tugadi!", show_alert=True)
+        query.answer("⏱ Sessiya tugadi!", show_alert=True)
         return
     
-    await query.answer()
-    await query.edit_message_text(
+    query.answer()
+    query.edit_message_text(
         "📸 Rasm yuborish:\n\n"
         "Ilova uchun rasmini yuboring (PNG/JPG)",
         reply_markup=get_admin_back_keyboard()
@@ -487,16 +495,16 @@ async def admin_add_app(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.set_user_state(user_id, {"action": "waiting_for_app_image"})
 
 
-async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def admin_stats(update: Update, context: CallbackContext):
     """Show admin statistics"""
     query = update.callback_query
     user_id = query.from_user.id
     
     if not db.is_admin(user_id) or not db.is_admin_authenticated(user_id):
-        await query.answer("⏱ Sessiya tugadi!", show_alert=True)
+        query.answer("⏱ Sessiya tugadi!", show_alert=True)
         return
     
-    await query.answer()
+    query.answer()
     
     stats = db.get_stats()
     text = f"📊 <b>Bot Statistikasi</b>\n\n"
@@ -506,28 +514,28 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text += f"👮 Adminlar: {stats['total_admins']}\n"
     text += f"📢 Majburiy kanallar: {stats['total_required_channels']}"
     
-    await query.edit_message_text(
+    query.edit_message_text(
         text,
         reply_markup=get_admin_back_keyboard(),
         parse_mode='HTML'
     )
 
 
-async def admin_list_apps(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def admin_list_apps(update: Update, context: CallbackContext):
     """List all apps"""
     query = update.callback_query
     user_id = query.from_user.id
     
     if not db.is_admin(user_id) or not db.is_admin_authenticated(user_id):
-        await query.answer("⏱ Sessiya tugadi!", show_alert=True)
+        query.answer("⏱ Sessiya tugadi!", show_alert=True)
         return
     
-    await query.answer()
+    query.answer()
     
     apps = db.get_all_apps()
     
     if not apps:
-        await query.edit_message_text(
+        query.edit_message_text(
             "❌ Ilovalar topilmadi.",
             reply_markup=get_admin_back_keyboard()
         )
@@ -537,23 +545,23 @@ async def admin_list_apps(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for app in apps:
         text += f"🔑 <code>{app['code']}</code> - {app['name']} (📥 {app['downloads']})\n"
     
-    await query.edit_message_text(
+    query.edit_message_text(
         text,
         reply_markup=get_admin_back_keyboard(),
         parse_mode='HTML'
     )
 
 
-async def admin_manage_admins(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def admin_manage_admins(update: Update, context: CallbackContext):
     """Show admin management panel"""
     query = update.callback_query
     user_id = query.from_user.id
 
     if not db.is_admin(user_id) or not db.is_admin_authenticated(user_id):
-        await query.answer("⏱ Sessiya tugadi!", show_alert=True)
+        query.answer("⏱ Sessiya tugadi!", show_alert=True)
         return
 
-    await query.answer()
+    query.answer()
     admins = db.get_admins()
     text = f"👮 <b>Adminlar ({len(admins)})</b>\n\n"
     for admin_id in admins:
@@ -565,57 +573,57 @@ async def admin_manage_admins(update: Update, context: ContextTypes.DEFAULT_TYPE
         [InlineKeyboardButton("⬅️ Orqaga", callback_data="admin_menu")]
     ]
 
-    await query.edit_message_text(
+    query.edit_message_text(
         text,
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode='HTML'
     )
 
 
-async def admin_add_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def admin_add_admin(update: Update, context: CallbackContext):
     """Start add admin process"""
     query = update.callback_query
     user_id = query.from_user.id
 
     if not db.is_admin(user_id) or not db.is_admin_authenticated(user_id):
-        await query.answer("⏱ Sessiya tugadi!", show_alert=True)
+        query.answer("⏱ Sessiya tugadi!", show_alert=True)
         return
 
-    await query.answer()
-    await query.edit_message_text(
+    query.answer()
+    query.edit_message_text(
         "Yangi adminning Telegram ID raqamini yuboring:",
         reply_markup=get_admin_back_keyboard()
     )
     db.set_user_state(user_id, {"action": "waiting_for_add_admin_id"})
 
 
-async def admin_remove_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def admin_remove_admin(update: Update, context: CallbackContext):
     """Start remove admin process"""
     query = update.callback_query
     user_id = query.from_user.id
 
     if not db.is_admin(user_id) or not db.is_admin_authenticated(user_id):
-        await query.answer("⏱ Sessiya tugadi!", show_alert=True)
+        query.answer("⏱ Sessiya tugadi!", show_alert=True)
         return
 
-    await query.answer()
-    await query.edit_message_text(
+    query.answer()
+    query.edit_message_text(
         "Olib tashlanadigan adminning Telegram ID raqamini yuboring:",
         reply_markup=get_admin_back_keyboard()
     )
     db.set_user_state(user_id, {"action": "waiting_for_remove_admin_id"})
 
 
-async def admin_manage_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def admin_manage_channels(update: Update, context: CallbackContext):
     """Show required channel management panel"""
     query = update.callback_query
     user_id = query.from_user.id
 
     if not db.is_admin(user_id) or not db.is_admin_authenticated(user_id):
-        await query.answer("⏱ Sessiya tugadi!", show_alert=True)
+        query.answer("⏱ Sessiya tugadi!", show_alert=True)
         return
 
-    await query.answer()
+    query.answer()
     channels = db.get_required_channels()
     text = f"📢 <b>Majburiy kanallar ({len(channels)})</b>\n\n"
     if channels:
@@ -631,24 +639,24 @@ async def admin_manage_channels(update: Update, context: ContextTypes.DEFAULT_TY
         [InlineKeyboardButton("⬅️ Orqaga", callback_data="admin_menu")]
     ]
 
-    await query.edit_message_text(
+    query.edit_message_text(
         text,
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode='HTML'
     )
 
 
-async def admin_add_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def admin_add_channel(update: Update, context: CallbackContext):
     """Start add required channel process"""
     query = update.callback_query
     user_id = query.from_user.id
 
     if not db.is_admin(user_id) or not db.is_admin_authenticated(user_id):
-        await query.answer("⏱ Sessiya tugadi!", show_alert=True)
+        query.answer("⏱ Sessiya tugadi!", show_alert=True)
         return
 
-    await query.answer()
-    await query.edit_message_text(
+    query.answer()
+    query.edit_message_text(
         "Kanal ID va username yuboring.\n\n"
         "Masalan: <code>-1001234567890 @kanal_username</code>\n"
         "Public kanal bo'lsa faqat <code>@kanal_username</code> ham bo'ladi.",
@@ -658,34 +666,34 @@ async def admin_add_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.set_user_state(user_id, {"action": "waiting_for_add_channel"})
 
 
-async def admin_remove_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def admin_remove_channel(update: Update, context: CallbackContext):
     """Start remove required channel process"""
     query = update.callback_query
     user_id = query.from_user.id
 
     if not db.is_admin(user_id) or not db.is_admin_authenticated(user_id):
-        await query.answer("⏱ Sessiya tugadi!", show_alert=True)
+        query.answer("⏱ Sessiya tugadi!", show_alert=True)
         return
 
-    await query.answer()
-    await query.edit_message_text(
+    query.answer()
+    query.edit_message_text(
         "Olib tashlanadigan kanal ID yoki username yuboring:",
         reply_markup=get_admin_back_keyboard()
     )
     db.set_user_state(user_id, {"action": "waiting_for_remove_channel"})
 
 
-async def admin_delete_app(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def admin_delete_app(update: Update, context: CallbackContext):
     """Start delete app process"""
     query = update.callback_query
     user_id = query.from_user.id
     
     if not db.is_admin(user_id) or not db.is_admin_authenticated(user_id):
-        await query.answer("⏱ Sessiya tugadi!", show_alert=True)
+        query.answer("⏱ Sessiya tugadi!", show_alert=True)
         return
     
-    await query.answer()
-    await query.edit_message_text(
+    query.answer()
+    query.edit_message_text(
         "Ilova kodini kiriting (o'chirish uchun):",
         reply_markup=get_admin_back_keyboard()
     )
@@ -693,17 +701,17 @@ async def admin_delete_app(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.set_user_state(user_id, {"action": "waiting_for_delete_code"})
 
 
-async def admin_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def admin_broadcast(update: Update, context: CallbackContext):
     """Start broadcast message"""
     query = update.callback_query
     user_id = query.from_user.id
     
     if not db.is_admin(user_id) or not db.is_admin_authenticated(user_id):
-        await query.answer("⏱ Sessiya tugadi!", show_alert=True)
+        query.answer("⏱ Sessiya tugadi!", show_alert=True)
         return
     
-    await query.answer()
-    await query.edit_message_text(
+    query.answer()
+    query.edit_message_text(
         "📢 Xabar yuboring (barcha foydalanuvchilarga):",
         reply_markup=get_admin_back_keyboard()
     )
@@ -711,22 +719,22 @@ async def admin_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.set_user_state(user_id, {"action": "waiting_for_broadcast"})
 
 
-async def admin_logout(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def admin_logout(update: Update, context: CallbackContext):
     """Logout admin"""
     query = update.callback_query
     user_id = query.from_user.id
     
     if not db.is_admin(user_id):
-        await query.answer("❌ Xato!", show_alert=True)
+        query.answer("❌ Xato!", show_alert=True)
         return
     
     db.clear_admin_session(user_id)
-    await query.answer("✅ Siz chiqib ketdingiz!", show_alert=True)
-    await query.edit_message_text("❌ Sessiya tugadi.")
+    query.answer("✅ Siz chiqib ketdingiz!", show_alert=True)
+    query.edit_message_text("❌ Sessiya tugadi.")
 
 
 # ==================== ADMIN FILE HANDLERS ====================
-async def handle_admin_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def handle_admin_input(update: Update, context: CallbackContext):
     """Handle admin inputs (image, file, etc.)"""
     message = update.message
     user_id = message.from_user.id
@@ -738,7 +746,7 @@ async def handle_admin_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
     action = user_state.get("action")
 
     if action != "waiting_for_search" and (not db.is_admin(user_id) or not db.is_admin_authenticated(user_id)):
-        await message.reply_text("⏱ Admin sessiya tugadi. /admin bilan qayta kiring.")
+        message.reply_text("⏱ Admin sessiya tugadi. /admin bilan qayta kiring.")
         db.clear_user_state(user_id)
         return
 
@@ -752,13 +760,13 @@ async def handle_admin_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
         "waiting_for_remove_channel",
     }
     if action in text_required_actions and not message.text:
-        await message.reply_text("❌ Iltimos, matn yuboring.")
+        message.reply_text("❌ Iltimos, matn yuboring.")
         return
     
     # Image upload for app
     if action == "waiting_for_app_image":
         if not message.photo:
-            await message.reply_text("❌ Rasm yuboring!")
+            message.reply_text("❌ Rasm yuboring!")
             return
         
         image = message.photo[-1]
@@ -767,7 +775,7 @@ async def handle_admin_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
         new_state["action"] = "waiting_for_app_name"
         db.set_user_state(user_id, new_state)
         
-        await message.reply_text("📝 Ilova nomini kiriting:")
+        message.reply_text("📝 Ilova nomini kiriting:")
         
     # App name
     elif action == "waiting_for_app_name":
@@ -776,12 +784,12 @@ async def handle_admin_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
         new_state["action"] = "waiting_for_app_file"
         db.set_user_state(user_id, new_state)
         
-        await message.reply_text("📦 APK/ZIP faylini yuboring:")
+        message.reply_text("📦 APK/ZIP faylini yuboring:")
         
     # App file
     elif action == "waiting_for_app_file":
         if not message.document:
-            await message.reply_text("❌ Fayl yuboring!")
+            message.reply_text("❌ Fayl yuboring!")
             return
         
         document = message.document
@@ -795,9 +803,9 @@ async def handle_admin_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
         app = db.get_app_by_code(app_code)
         
         # Send to channel
-        await send_to_channel(context, app)
+        send_to_channel(context, app)
         
-        await message.reply_text(
+        message.reply_text(
             f"✅ Ilova qo'shildi!\n\n"
             f"📱 Nom: {app_name}\n"
             f"🔑 Kod: <code>{app_code}</code>\n"
@@ -812,13 +820,13 @@ async def handle_admin_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
     elif action == "waiting_for_delete_code":
         code = message.text.strip()
         if db.delete_app(code):
-            await message.reply_text(
+            message.reply_text(
                 f"✅ Ilova <code>{code}</code> o'chirildi!",
                 parse_mode='HTML',
                 reply_markup=get_admin_menu_keyboard()
             )
         else:
-            await message.reply_text(
+            message.reply_text(
                 f"❌ Ilova <code>{code}</code> topilmadi!",
                 parse_mode='HTML'
             )
@@ -832,7 +840,7 @@ async def handle_admin_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
         
         for user in users:
             try:
-                await context.bot.send_message(
+                context.bot.send_message(
                     chat_id=int(user["id"]),
                     text=f"📢 <b>Admin xabari:</b>\n\n{broadcast_message}",
                     parse_mode='HTML'
@@ -841,7 +849,7 @@ async def handle_admin_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
             except:
                 pass
         
-        await message.reply_text(
+        message.reply_text(
             f"✅ Xabar {sent} ta foydalanuvchiga yuborildi!",
             reply_markup=get_admin_menu_keyboard()
         )
@@ -851,17 +859,17 @@ async def handle_admin_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
     elif action == "waiting_for_add_admin_id":
         admin_id_text = message.text.strip()
         if not admin_id_text.isdigit():
-            await message.reply_text("❌ Admin ID faqat raqamlardan iborat bo'lishi kerak.")
+            message.reply_text("❌ Admin ID faqat raqamlardan iborat bo'lishi kerak.")
             return
 
         if db.add_admin(int(admin_id_text)):
-            await message.reply_text(
+            message.reply_text(
                 f"✅ <code>{admin_id_text}</code> admin qilib qo'shildi!",
                 parse_mode='HTML',
                 reply_markup=get_admin_menu_keyboard()
             )
         else:
-            await message.reply_text(
+            message.reply_text(
                 f"ℹ️ <code>{admin_id_text}</code> allaqachon admin.",
                 parse_mode='HTML',
                 reply_markup=get_admin_menu_keyboard()
@@ -872,17 +880,17 @@ async def handle_admin_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
     elif action == "waiting_for_remove_admin_id":
         admin_id_text = message.text.strip()
         if not admin_id_text.isdigit():
-            await message.reply_text("❌ Admin ID faqat raqamlardan iborat bo'lishi kerak.")
+            message.reply_text("❌ Admin ID faqat raqamlardan iborat bo'lishi kerak.")
             return
 
         if db.remove_admin(int(admin_id_text)):
-            await message.reply_text(
+            message.reply_text(
                 f"✅ <code>{admin_id_text}</code> adminlardan olindi!",
                 parse_mode='HTML',
                 reply_markup=get_admin_menu_keyboard()
             )
         else:
-            await message.reply_text(
+            message.reply_text(
                 "❌ Admin topilmadi yoki asosiy adminni olib tashlab bo'lmaydi.",
                 reply_markup=get_admin_menu_keyboard()
             )
@@ -892,11 +900,11 @@ async def handle_admin_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
     elif action == "waiting_for_add_channel":
         chat_id, username = parse_channel_input(message.text)
         if not chat_id:
-            await message.reply_text("❌ Kanal ID yoki username yuboring.")
+            message.reply_text("❌ Kanal ID yoki username yuboring.")
             return
 
         if db.add_required_channel(chat_id, username):
-            await message.reply_text(
+            message.reply_text(
                 "✅ Majburiy kanal qo'shildi!\n\n"
                 f"ID: <code>{chat_id}</code>\n"
                 f"Username: {username or 'yoq'}",
@@ -904,7 +912,7 @@ async def handle_admin_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 reply_markup=get_admin_menu_keyboard()
             )
         else:
-            await message.reply_text(
+            message.reply_text(
                 "ℹ️ Bu kanal allaqachon ro'yxatda bor.",
                 reply_markup=get_admin_menu_keyboard()
             )
@@ -914,36 +922,36 @@ async def handle_admin_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
     elif action == "waiting_for_remove_channel":
         identifier = message.text.strip()
         if db.remove_required_channel(identifier):
-            await message.reply_text(
+            message.reply_text(
                 "✅ Majburiy kanal olib tashlandi!",
                 reply_markup=get_admin_menu_keyboard()
             )
         else:
-            await message.reply_text(
+            message.reply_text(
                 "❌ Kanal topilmadi.",
                 reply_markup=get_admin_menu_keyboard()
             )
         db.clear_user_state(user_id)
 
 
-async def check_subscription_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def check_subscription_button(update: Update, context: CallbackContext):
     """Check subscription"""
     query = update.callback_query
     user_id = query.from_user.id
     
-    is_subscribed = await check_subscription(user_id, context)
+    is_subscribed = check_subscription(user_id, context)
     
     if is_subscribed:
-        await query.answer("✅ Obuna bo'lgansiz!", show_alert=True)
-        await query.edit_message_text(
+        query.answer("✅ Obuna bo'lgansiz!", show_alert=True)
+        query.edit_message_text(
             "✅ Obunangiz tasdiqlandi! Botdan foydalanishni davom ettiring.",
             reply_markup=get_main_menu_keyboard()
         )
     else:
-        await query.answer("❌ Hali obuna bo'lmagansiz!", show_alert=True)
+        query.answer("❌ Hali obuna bo'lmagansiz!", show_alert=True)
 
 
-async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def handle_text_input(update: Update, context: CallbackContext):
     """Route text messages by saved user state"""
     user_state = db.get_user_state(update.message.from_user.id)
     if not user_state:
@@ -951,49 +959,54 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if user_state.get("action") == "waiting_for_search":
         if not update.message.text:
-            await update.message.reply_text("❌ Qidirish uchun matn yuboring.")
+            update.message.reply_text("❌ Qidirish uchun matn yuboring.")
             return
-        await handle_search_input(update, context)
+        handle_search_input(update, context)
     else:
-        await handle_admin_input(update, context)
+        handle_admin_input(update, context)
 
 
-async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def id_command(update: Update, context: CallbackContext):
     """Show user ID"""
     message = update.message
-    await message.reply_text(f"🆔 Sizning ID: <code>{message.from_user.id}</code>", parse_mode='HTML')
+    message.reply_text(f"🆔 Sizning ID: <code>{message.from_user.id}</code>", parse_mode='HTML')
 
 
-async def get_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def get_command(update: Update, context: CallbackContext):
     """Get app by code (/get_CODE)"""
     message = update.message
     
     # Check subscription
-    is_subscribed = await check_subscription(message.from_user.id, context)
+    is_subscribed = check_subscription(message.from_user.id, context)
     if not is_subscribed:
-        await message.reply_text(
+        message.reply_text(
             "❌ Kanalga obuna bo'lish kerak!",
             reply_markup=get_subscription_keyboard()
         )
         return
     
-    # Extract code from command
-    if not context.args:
-        await message.reply_text("❌ Kod kiriting: /get_1")
+    # Extract code from /get CODE or /get_CODE.
+    app_code = None
+    if context.args:
+        app_code = context.args[0]
+    elif message.text and message.text.startswith("/get_"):
+        app_code = message.text.split()[0].split("@")[0].replace("/get_", "", 1)
+
+    if not app_code:
+        message.reply_text("❌ Kod kiriting: /get_1")
         return
     
-    app_code = context.args[0]
     app = db.get_app_by_code(app_code)
     
     if not app:
-        await message.reply_text(f"❌ Ilova kod <code>{app_code}</code> topilmadi!", parse_mode='HTML')
+        message.reply_text(f"❌ Ilova kod <code>{app_code}</code> topilmadi!", parse_mode='HTML')
         return
     
-    await send_document_action(context, message.from_user.id)
+    send_document_action(context, message.from_user.id)
     db.increment_download(app_code, message.from_user.id)
     
     try:
-        await context.bot.send_document(
+        context.bot.send_document(
             chat_id=message.from_user.id,
             document=app['file_id'],
             caption=f"✅ <b>{app['name']}</b>\n\n📥 Jami yuklanishlar: {db.get_app_by_code(app_code)['downloads']}",
@@ -1001,18 +1014,20 @@ async def get_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except Exception as e:
         logger.error(f"Error: {e}")
-        await message.reply_text("❌ Xato!")
+        message.reply_text("❌ Xato!")
 
 
 def build_application():
-    """Build and configure the Telegram bot application."""
-    app = Application.builder().token(BOT_TOKEN).build()
+    """Build and configure the Telegram bot updater for python-telegram-bot 13.x."""
+    updater = Updater(token=BOT_TOKEN, use_context=True)
+    app = updater.dispatcher
     
     # Commands
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("admin", admin_command))
     app.add_handler(CommandHandler("id", id_command))
-    app.add_handler(CommandHandler("get", get_command, has_args=True))
+    app.add_handler(CommandHandler("get", get_command))
+    app.add_handler(MessageHandler(Filters.regex(r"^/get_"), get_command))
     
     # Callbacks
     app.add_handler(CallbackQueryHandler(main_menu, pattern="^main_menu$"))
@@ -1042,17 +1057,18 @@ def build_application():
     app.add_handler(CallbackQueryHandler(admin_logout, pattern="^admin_logout$"))
     
     # Message handlers
-    app.add_handler(MessageHandler((filters.TEXT | filters.PHOTO | filters.Document.ALL) & ~filters.COMMAND, handle_text_input))
+    app.add_handler(MessageHandler((Filters.text | Filters.photo | Filters.document) & ~Filters.command, handle_text_input))
 
-    return app
+    return updater
 
 
 def main():
     """Start the bot with polling for local development."""
-    app = build_application()
+    updater = build_application()
     
     # Start polling
-    app.run_polling()
+    updater.start_polling()
+    updater.idle()
 
 
 if __name__ == '__main__':
