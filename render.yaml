@@ -12,13 +12,13 @@ services:
       - key: BOT_TOKEN
         sync: false
       - key: BOT_USERNAME
-        sync: false
+        value: "@prohub_robot"
       - key: REQUIRED_CHANNEL
-        sync: false
+        value: "@premiumilova202"
       - key: CHANNEL_ID
-        sync: false
+        value: "-1003825980145"
       - key: ADMIN_ID
-        sync: false
+        value: "8243876799"
       - key: APPS_PER_PAGE
         value: "10"
       - key: WEBHOOK_PATH

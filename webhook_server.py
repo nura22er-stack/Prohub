@@ -65,7 +65,10 @@ def start_telegram_application():
 
 
 def ensure_telegram_started():
+    global telegram_error
+
     if not BOT_TOKEN:
+        telegram_error = "BOT_TOKEN is missing"
         logger.warning("BOT_TOKEN is missing; Telegram webhook is disabled.")
         return
 
