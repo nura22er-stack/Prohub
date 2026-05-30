@@ -23,6 +23,8 @@ services:
         value: "10"
       - key: WEBHOOK_PATH
         value: telegram-webhook
+      - key: WEBHOOK_URL
+        value: https://prohub-3-gtjo.onrender.com/telegram-webhook
       - key: DATA_FILE
         value: /var/data/bot_data.json
     disk:
