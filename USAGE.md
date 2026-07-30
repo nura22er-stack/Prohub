@@ -42,12 +42,12 @@
 |---------|----------|
 | `/start` | Botni ishga tushirish |
 | `/id` | Sizning Telegram ID sini ko'rsatish |
-| `/get_KOD` | Kod orqali ilovani yuklash (masalan: `/get_1`) |
+| `KOD` | Kod orqali ilovani yuklash (masalan: `1`) |
 
 **Misollar:**
 ```
-/get_1         → Code 1 orqali ilovani yuklash
-/get_123       → Code 123 orqali ilovani yuklash
+1              → Code 1 orqali ilovani yuklash
+123            → Code 123 orqali ilovani yuklash
 ```
 
 ## 🔧 Admin Uchun

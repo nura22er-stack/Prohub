@@ -100,7 +100,7 @@ python website/api_app.py
 | `/start` | Botni ishga tushirish |
 | `/admin` | Admin panelga kirish (faqat admin) |
 | `/id` | Foydalanuvchi ID sini ko'rsatish |
-| `/get_KOD` | Kod orqali ilovani yuklash |
+| `KOD` | Kod orqali ilovani yuklash (masalan: `1`) |
 
 ## 🎮 Bot Tugmalari
 

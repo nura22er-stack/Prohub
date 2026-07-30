@@ -419,7 +419,7 @@ def help_command(update: Update, context: CallbackContext):
     text += "<b>Komandalari:</b>\n"
     text += "/start - Botni ishga tushirish\n"
     text += "/id - Sizning ID ingizni ko'rsatish\n"
-    text += "/get_KOD - Kod orqali ilovani yuklash\n"
+    text += "KOD - Ilovani yuklash uchun kodni raqam bilan yuboring\n"
     text += "/admin - Admin panelga kirish (faqat admin)\n\n"
     text += "<b>Qo'shimcha:</b>\n"
     text += "• Qanday ilova topasiz? 🔍 Qidiruv tugmasidan foydalaning\n"
@@ -972,9 +972,13 @@ def id_command(update: Update, context: CallbackContext):
     message.reply_text(f"🆔 Sizning ID: <code>{message.from_user.id}</code>", parse_mode='HTML')
 
 
-def get_command(update: Update, context: CallbackContext):
-    """Get app by code (/get_CODE)"""
+def send_app_by_code(update: Update, context: CallbackContext):
+    """Send an app when the user sends its numeric code."""
     message = update.message
+    app_code = message.text.strip()
+    if db.get_user_state(message.from_user.id):
+        handle_text_input(update, context)
+        return
     
     # Check subscription
     is_subscribed = check_subscription(message.from_user.id, context)
@@ -983,17 +987,6 @@ def get_command(update: Update, context: CallbackContext):
             "❌ Kanalga obuna bo'lish kerak!",
             reply_markup=get_subscription_keyboard()
         )
-        return
-    
-    # Extract code from /get CODE or /get_CODE.
-    app_code = None
-    if context.args:
-        app_code = context.args[0]
-    elif message.text and message.text.startswith("/get_"):
-        app_code = message.text.split()[0].split("@")[0].replace("/get_", "", 1)
-
-    if not app_code:
-        message.reply_text("❌ Kod kiriting: /get_1")
         return
     
     app = db.get_app_by_code(app_code)
@@ -1026,8 +1019,6 @@ def build_application():
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("admin", admin_command))
     app.add_handler(CommandHandler("id", id_command))
-    app.add_handler(CommandHandler("get", get_command))
-    app.add_handler(MessageHandler(Filters.regex(r"^/get_"), get_command))
     
     # Callbacks
     app.add_handler(CallbackQueryHandler(main_menu, pattern="^main_menu$"))
@@ -1057,6 +1048,7 @@ def build_application():
     app.add_handler(CallbackQueryHandler(admin_logout, pattern="^admin_logout$"))
     
     # Message handlers
+    app.add_handler(MessageHandler(Filters.regex(r"^\d+$") & ~Filters.command, send_app_by_code))
     app.add_handler(MessageHandler((Filters.text | Filters.photo | Filters.document) & ~Filters.command, handle_text_input))
 
     return updater

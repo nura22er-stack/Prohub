@@ -116,7 +116,7 @@ Helper funksiyalar va inline tugmalar:
 #### main.py
 Asosiy bot fayli:
 - Telegram Application yaratish va konfiguratsiya
-- Command handlers (/start, /admin, /id, /get_CODE)
+- Command handlers (/start, /admin, /id) va raqamli kod handlerlari
 - Callback query handlers (inline button clicks)
 - Message handlers (user text input)
 - Bot polling start

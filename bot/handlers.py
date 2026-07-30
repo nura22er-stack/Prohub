@@ -135,7 +135,7 @@ def send_to_channel(context: CallbackContext, app: dict) -> bool:
     sent = False
     try:
         caption = f"🆕 Yangi ilova!\n\n📱 <b>{app['name']}</b>\n\n🔑 Kod: <code>{app['code']}</code>\n\n"
-        caption += f"/get_{app['code']} - ilovani yuklash uchun\n"
+        caption += f"Ilovani yuklash uchun botga <code>{app['code']}</code> kodini yuboring.\n"
         caption += f"\nYoki botdan: @{BOT_USERNAME.lstrip('@')}"
 
         for channel in channels:
