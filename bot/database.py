@@ -27,6 +27,11 @@ class Database:
             "users": [],
             "admins": [],
             "required_channels": [],
+            "source_channels": [],
+            "automation": {
+                "auto_import": False,
+                "ai_rewrite": True
+            },
             "admin_session": {},
             "state": {}
         }
@@ -78,7 +83,7 @@ class Database:
             print(f"Error saving data: {e}")
 
     # ==================== APP MANAGEMENT ====================
-    def add_app(self, name: str, file_id: str, file_name: str, image_id: str) -> str:
+    def add_app(self, name: str, file_id: str, file_name: str, image_id: str = None) -> str:
         """Add new app and return its code"""
         data = self.load_data()
         
@@ -165,6 +170,16 @@ class Database:
         for app in data["apps"]:
             if app["code"] == code:
                 app["active"] = False
+                self.save_data(data)
+                return True
+        return False
+
+    def update_app_name(self, code: str, name: str) -> bool:
+        """Update app display name."""
+        data = self.load_data()
+        for app in data["apps"]:
+            if app["code"] == code:
+                app["name"] = name
                 self.save_data(data)
                 return True
         return False
@@ -333,6 +348,68 @@ class Database:
             username = username.replace("t.me/", "", 1)
         return username if username.startswith("@") else f"@{username}"
 
+    # ==================== AUTOMATION ====================
+    def get_source_channels(self) -> List[Dict[str, str]]:
+        """Get channels that are allowed as app sources."""
+        data = self.load_data()
+        return data["source_channels"]
+
+    def add_source_channel(self, chat_id: str, username: str = None, title: str = None) -> bool:
+        """Add a trusted source channel for automatic app imports."""
+        data = self.load_data()
+        chat_id = str(chat_id).strip()
+        username = self._normalize_username(username)
+
+        for channel in data["source_channels"]:
+            if channel["id"] == chat_id or (username and channel.get("username") == username):
+                return False
+
+        data["source_channels"].append({
+            "id": chat_id,
+            "username": username,
+            "title": title or username or chat_id
+        })
+        self.save_data(data)
+        return True
+
+    def remove_source_channel(self, identifier: str) -> bool:
+        """Remove a source channel by ID or username."""
+        data = self.load_data()
+        identifier = identifier.strip()
+        normalized_username = self._normalize_username(identifier)
+
+        for channel in data["source_channels"]:
+            if channel["id"] == identifier or channel.get("username") == normalized_username:
+                data["source_channels"].remove(channel)
+                self.save_data(data)
+                return True
+        return False
+
+    def is_source_channel(self, chat_id: int, username: str = None) -> bool:
+        """Check whether a Telegram channel is trusted for app imports."""
+        data = self.load_data()
+        normalized_username = self._normalize_username(username)
+        chat_id = str(chat_id)
+
+        for channel in data["source_channels"]:
+            if channel["id"] == chat_id or (normalized_username and channel.get("username") == normalized_username):
+                return True
+        return False
+
+    def get_automation_settings(self) -> Dict[str, Any]:
+        """Get automation settings."""
+        data = self.load_data()
+        return data["automation"]
+
+    def set_automation(self, key: str, value: bool) -> bool:
+        """Set a boolean automation option."""
+        data = self.load_data()
+        if key not in data["automation"]:
+            return False
+        data["automation"][key] = bool(value)
+        self.save_data(data)
+        return True
+
     # ==================== USER STATE ====================
     def set_user_state(self, user_id: int, state: Dict[str, Any]):
         """Set user state"""
@@ -364,5 +441,7 @@ class Database:
             "total_users": len(data["users"]),
             "total_downloads": total_downloads,
             "total_admins": len(data["admins"]),
-            "total_required_channels": len(data["required_channels"])
+            "total_required_channels": len(data["required_channels"]),
+            "total_source_channels": len(data["source_channels"]),
+            "automation": data["automation"]
         }

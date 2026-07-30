@@ -6,6 +6,7 @@ from telegram.ext import (
     CallbackContext,
     CommandHandler,
     CallbackQueryHandler,
+    ChannelPostHandler,
     MessageHandler,
     Filters,
     ConversationHandler,
@@ -13,6 +14,7 @@ from telegram.ext import (
 
 from .config import BOT_TOKEN, APPS_PER_PAGE
 from .database import Database
+from .ai import improve_app_copy, build_stats_insights
 from .handlers import (
     check_subscription, get_main_menu_keyboard, get_admin_menu_keyboard,
     get_subscription_keyboard, get_apps_keyboard, get_back_button,
@@ -512,7 +514,10 @@ def admin_stats(update: Update, context: CallbackContext):
     text += f"👥 Jami foydalanuvchilar: {stats['total_users']}\n"
     text += f"📥 Jami yuklanishlar: {stats['total_downloads']}\n"
     text += f"👮 Adminlar: {stats['total_admins']}\n"
-    text += f"📢 Majburiy kanallar: {stats['total_required_channels']}"
+    text += f"📢 Majburiy kanallar: {stats['total_required_channels']}\n"
+    text += f"🔎 Source kanallar: {stats['total_source_channels']}\n"
+    text += f"🤖 Auto import: {'yoqilgan' if stats['automation'].get('auto_import') else 'ochiq emas'}\n\n"
+    text += build_stats_insights(stats)
     
     query.edit_message_text(
         text,
@@ -683,6 +688,81 @@ def admin_remove_channel(update: Update, context: CallbackContext):
     db.set_user_state(user_id, {"action": "waiting_for_remove_channel"})
 
 
+def admin_automation(update: Update, context: CallbackContext):
+    """Show automation settings."""
+    query = update.callback_query
+    user_id = query.from_user.id
+
+    if not db.is_admin(user_id) or not db.is_admin_authenticated(user_id):
+        query.answer("⏱ Sessiya tugadi!", show_alert=True)
+        return
+
+    query.answer()
+    settings = db.get_automation_settings()
+    sources = db.get_source_channels()
+    text = "🤖 <b>Avtomat tizim</b>\n\n"
+    text += f"Auto import: <b>{'yoqilgan' if settings.get('auto_import') else 'ochiq emas'}</b>\n"
+    text += f"AI post yozish: <b>{'yoqilgan' if settings.get('ai_rewrite') else 'ochiq emas'}</b>\n\n"
+    text += f"Source kanallar ({len(sources)}):\n"
+    if sources:
+        for channel in sources:
+            text += f"• <code>{channel['id']}</code> - {channel.get('username') or 'username yoq'}\n"
+    else:
+        text += "Hali source kanal yo'q.\n"
+
+    keyboard = [
+        [InlineKeyboardButton("Auto import on/off", callback_data="admin_toggle_auto_import")],
+        [InlineKeyboardButton("AI post on/off", callback_data="admin_toggle_ai_rewrite")],
+        [InlineKeyboardButton("Source kanal qo'shish", callback_data="admin_add_source")],
+        [InlineKeyboardButton("Source kanal olib tashlash", callback_data="admin_remove_source")],
+        [InlineKeyboardButton("⬅️ Orqaga", callback_data="admin_menu")]
+    ]
+    query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
+
+
+def admin_toggle_automation(update: Update, context: CallbackContext):
+    """Toggle automation options."""
+    query = update.callback_query
+    user_id = query.from_user.id
+
+    if not db.is_admin(user_id) or not db.is_admin_authenticated(user_id):
+        query.answer("⏱ Sessiya tugadi!", show_alert=True)
+        return
+
+    key = "auto_import" if query.data == "admin_toggle_auto_import" else "ai_rewrite"
+    settings = db.get_automation_settings()
+    db.set_automation(key, not settings.get(key))
+    query.answer("Saqlandi!", show_alert=True)
+    admin_automation(update, context)
+
+
+def admin_add_source(update: Update, context: CallbackContext):
+    query = update.callback_query
+    user_id = query.from_user.id
+    if not db.is_admin(user_id) or not db.is_admin_authenticated(user_id):
+        query.answer("⏱ Sessiya tugadi!", show_alert=True)
+        return
+    query.answer()
+    query.edit_message_text(
+        "Source kanal ID va username yuboring.\n\n"
+        "Masalan: <code>-1001234567890 @source_channel</code>",
+        reply_markup=get_admin_back_keyboard(),
+        parse_mode='HTML'
+    )
+    db.set_user_state(user_id, {"action": "waiting_for_add_source"})
+
+
+def admin_remove_source(update: Update, context: CallbackContext):
+    query = update.callback_query
+    user_id = query.from_user.id
+    if not db.is_admin(user_id) or not db.is_admin_authenticated(user_id):
+        query.answer("⏱ Sessiya tugadi!", show_alert=True)
+        return
+    query.answer()
+    query.edit_message_text("Olib tashlanadigan source kanal ID yoki username yuboring:", reply_markup=get_admin_back_keyboard())
+    db.set_user_state(user_id, {"action": "waiting_for_remove_source"})
+
+
 def admin_delete_app(update: Update, context: CallbackContext):
     """Start delete app process"""
     query = update.callback_query
@@ -758,6 +838,8 @@ def handle_admin_input(update: Update, context: CallbackContext):
         "waiting_for_remove_admin_id",
         "waiting_for_add_channel",
         "waiting_for_remove_channel",
+        "waiting_for_add_source",
+        "waiting_for_remove_source",
     }
     if action in text_required_actions and not message.text:
         message.reply_text("❌ Iltimos, matn yuboring.")
@@ -933,6 +1015,34 @@ def handle_admin_input(update: Update, context: CallbackContext):
             )
         db.clear_user_state(user_id)
 
+    # Add source channel
+    elif action == "waiting_for_add_source":
+        chat_id, username = parse_channel_input(message.text)
+        if not chat_id:
+            message.reply_text("❌ Kanal ID yoki username yuboring.")
+            return
+
+        if db.add_source_channel(chat_id, username):
+            message.reply_text(
+                "✅ Source kanal qo'shildi!\n\n"
+                f"ID: <code>{chat_id}</code>\n"
+                f"Username: {username or 'yoq'}",
+                parse_mode='HTML',
+                reply_markup=get_admin_menu_keyboard()
+            )
+        else:
+            message.reply_text("ℹ️ Bu source kanal allaqachon bor.", reply_markup=get_admin_menu_keyboard())
+        db.clear_user_state(user_id)
+
+    # Remove source channel
+    elif action == "waiting_for_remove_source":
+        identifier = message.text.strip()
+        if db.remove_source_channel(identifier):
+            message.reply_text("✅ Source kanal olib tashlandi!", reply_markup=get_admin_menu_keyboard())
+        else:
+            message.reply_text("❌ Source kanal topilmadi.", reply_markup=get_admin_menu_keyboard())
+        db.clear_user_state(user_id)
+
 
 def check_subscription_button(update: Update, context: CallbackContext):
     """Check subscription"""
@@ -1010,6 +1120,41 @@ def send_app_by_code(update: Update, context: CallbackContext):
         message.reply_text("❌ Xato!")
 
 
+def handle_source_channel_post(update: Update, context: CallbackContext):
+    """Import app documents posted in trusted source channels."""
+    message = update.channel_post
+    if not message or not message.document:
+        return
+
+    settings = db.get_automation_settings()
+    if not settings.get("auto_import"):
+        return
+
+    chat = message.chat
+    if not db.is_source_channel(chat.id, chat.username):
+        return
+
+    document = message.document
+    file_name = document.file_name or "app"
+    if not file_name.lower().endswith((".apk", ".zip", ".xapk", ".apks")):
+        return
+
+    raw_name = (message.caption or file_name).splitlines()[0].strip()
+    app_name = raw_name[:80] or file_name
+    app_code = db.add_app(app_name, document.file_id, file_name, None)
+    app = db.get_app_by_code(app_code)
+
+    caption = None
+    if settings.get("ai_rewrite"):
+        ai_copy = improve_app_copy(app_name, app_code, message.caption or file_name)
+        app["name"] = ai_copy["name"]
+        db.update_app_name(app_code, ai_copy["name"])
+        caption = ai_copy["caption"]
+
+    sent = send_to_channel(context, app, caption=caption)
+    logger.info("Auto imported app %s from %s, sent=%s", app_code, chat.id, sent)
+
+
 def build_application():
     """Build and configure the Telegram bot updater for python-telegram-bot 13.x."""
     updater = Updater(token=BOT_TOKEN, use_context=True)
@@ -1044,12 +1189,17 @@ def build_application():
     app.add_handler(CallbackQueryHandler(admin_manage_channels, pattern="^admin_manage_channels$"))
     app.add_handler(CallbackQueryHandler(admin_add_channel, pattern="^admin_add_channel$"))
     app.add_handler(CallbackQueryHandler(admin_remove_channel, pattern="^admin_remove_channel$"))
+    app.add_handler(CallbackQueryHandler(admin_automation, pattern="^admin_automation$"))
+    app.add_handler(CallbackQueryHandler(admin_toggle_automation, pattern="^admin_toggle_(auto_import|ai_rewrite)$"))
+    app.add_handler(CallbackQueryHandler(admin_add_source, pattern="^admin_add_source$"))
+    app.add_handler(CallbackQueryHandler(admin_remove_source, pattern="^admin_remove_source$"))
     app.add_handler(CallbackQueryHandler(admin_broadcast, pattern="^admin_broadcast$"))
     app.add_handler(CallbackQueryHandler(admin_logout, pattern="^admin_logout$"))
     
     # Message handlers
     app.add_handler(MessageHandler(Filters.regex(r"^\d+$") & ~Filters.command, send_app_by_code))
     app.add_handler(MessageHandler((Filters.text | Filters.photo | Filters.document) & ~Filters.command, handle_text_input))
+    app.add_handler(ChannelPostHandler(handle_source_channel_post, Filters.document))
 
     return updater
 

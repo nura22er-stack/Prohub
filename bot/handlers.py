@@ -47,6 +47,7 @@ def get_admin_menu_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton("🗑 Ilova o'chirish", callback_data="admin_delete_app")],
         [InlineKeyboardButton("👮 Adminlar", callback_data="admin_manage_admins")],
         [InlineKeyboardButton("📢 Majburiy kanallar", callback_data="admin_manage_channels")],
+        [InlineKeyboardButton("🤖 Avtomat tizim", callback_data="admin_automation")],
         [InlineKeyboardButton("📢 Reklama yuborish", callback_data="admin_broadcast")],
         [InlineKeyboardButton("📁 Data fayl", callback_data="admin_data_file")],
         [InlineKeyboardButton("❌ Chiqish", callback_data="admin_logout")]
@@ -129,23 +130,32 @@ def parse_referral_code(deep_link: str) -> int:
     return None
 
 
-def send_to_channel(context: CallbackContext, app: dict) -> bool:
+def send_to_channel(context: CallbackContext, app: dict, caption: str = None) -> bool:
     """Send app announcement to channel"""
     channels = db.get_required_channels()
     sent = False
     try:
-        caption = f"🆕 Yangi ilova!\n\n📱 <b>{app['name']}</b>\n\n🔑 Kod: <code>{app['code']}</code>\n\n"
-        caption += f"Ilovani yuklash uchun botga <code>{app['code']}</code> kodini yuboring.\n"
-        caption += f"\nYoki botdan: @{BOT_USERNAME.lstrip('@')}"
+        if caption is None:
+            caption = f"🆕 Yangi ilova!\n\n📱 <b>{app['name']}</b>\n\n🔑 Kod: <code>{app['code']}</code>\n\n"
+            caption += f"Ilovani yuklash uchun botga <code>{app['code']}</code> kodini yuboring.\n"
+            caption += f"\nYoki botdan: @{BOT_USERNAME.lstrip('@')}"
 
         for channel in channels:
             try:
-                context.bot.send_photo(
-                    chat_id=channel["id"],
-                    photo=app['image'],
-                    caption=caption,
-                    parse_mode='HTML'
-                )
+                if app.get('image'):
+                    context.bot.send_photo(
+                        chat_id=channel["id"],
+                        photo=app['image'],
+                        caption=caption,
+                        parse_mode='HTML'
+                    )
+                else:
+                    context.bot.send_document(
+                        chat_id=channel["id"],
+                        document=app['file_id'],
+                        caption=caption,
+                        parse_mode='HTML'
+                    )
                 sent = True
             except Exception as e:
                 print(f"Error sending to channel {channel['id']}: {e}")

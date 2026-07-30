@@ -9,6 +9,8 @@ Foydalanuvchilarga premium va MOD ilovalarni bepul yuklab olish imkoniyatini ber
 - **Qidiruv tizimi** - Ilova nomi yoki kod orqali qidirish
 - **Referal tizim** - Do'st taklif qilish uchun link, 2 ta do'st taklif qilgandan keyin qimmatli ilovalar ochiladi
 - **Admin panel** - Ilova qo'shish, o'chirish, statistika, reklama yuborish
+- **Avtomat tizim** - Ishonchli source kanallardan yangi APK/ZIP postlarini import qilish
+- **AI post yozish** - Yangi ilova postlarini AI yordamida chiroyliroq matnga aylantirish
 - **Statistika** - Jami ilovalar, foydalanuvchilar, yuklanishlar
 - **Veb-sayt** - Glassmorphism dizaynli website
 - **API** - RESTful API bilan integratsiya
@@ -119,7 +121,18 @@ python website/api_app.py
 - 📦 **Ilovalar ro'yxati** - Barcha ilovalar ro'yxati
 - 🗑 **Ilova o'chirish** - Kod orqali ilova o'chirish
 - 📢 **Reklama yuborish** - Barcha foydalanuvchilarga xabar
+- 🤖 **Avtomat tizim** - Source kanal qo'shish/o'chirish, auto import va AI post yozishni yoqish/o'chirish
 - 📁 **Data fayl** - Ma'lumotlar haqida
+
+### Avtomat tizim
+
+1. Botni source kanalda admin qiling.
+2. Admin paneldan **Avtomat tizim** bo'limiga kiring.
+3. **Source kanal qo'shish** tugmasi bilan kanal ID va username kiriting.
+4. **Auto import on/off** ni yoqing.
+5. Source kanalda yangi `.apk`, `.zip`, `.xapk` yoki `.apks` fayl post qilinsa, bot uni bazaga qo'shib, o'zingizning ruxsatli kanallaringizga post qiladi.
+
+Eslatma: bot ochiq guruh yoki begona saytlarga avtomatik reklama yubormaydi. Postlar faqat siz boshqaradigan va bot admin bo'lgan kanallarga yuboriladi.
 
 ## 📊 Ma'lumotlar Bazasi Tuzilishi
 
@@ -176,6 +189,10 @@ ADMIN_ID=your_admin_telegram_id
 APPS_PER_PAGE=10
 API_PORT=5000
 API_HOST=0.0.0.0
+AI_API_KEY=your_ai_api_key_here
+AI_API_BASE_URL=https://api.openai.com/v1
+AI_MODEL=gpt-4o-mini
+AI_TIMEOUT=25
 ```
 
 ## 📲 Sayt

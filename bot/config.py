@@ -20,6 +20,12 @@ CHANNEL_ID = get_int_env('CHANNEL_ID', -1003825980145)
 ADMIN_ID = get_int_env('ADMIN_ID', 8243876799)
 APPS_PER_PAGE = get_int_env('APPS_PER_PAGE', 10)
 
+# AI Configuration
+AI_API_KEY = os.getenv('AI_API_KEY') or os.getenv('OPENAI_API_KEY')
+AI_API_BASE_URL = os.getenv('AI_API_BASE_URL', 'https://api.openai.com/v1')
+AI_MODEL = os.getenv('AI_MODEL', 'gpt-4o-mini')
+AI_TIMEOUT = get_int_env('AI_TIMEOUT', 25)
+
 # Database
 DEFAULT_DATA_FILE = os.path.join(os.path.dirname(__file__), '..', 'data', 'bot_data.json')
 DATA_FILE = os.getenv('DATA_FILE', DEFAULT_DATA_FILE)
