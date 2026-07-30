@@ -6,7 +6,6 @@ from telegram.ext import (
     CallbackContext,
     CommandHandler,
     CallbackQueryHandler,
-    ChannelPostHandler,
     MessageHandler,
     Filters,
     ConversationHandler,
@@ -713,6 +712,8 @@ def admin_automation(update: Update, context: CallbackContext):
     keyboard = [
         [InlineKeyboardButton("Auto import on/off", callback_data="admin_toggle_auto_import")],
         [InlineKeyboardButton("AI post on/off", callback_data="admin_toggle_ai_rewrite")],
+        [InlineKeyboardButton("AI test", callback_data="admin_ai_test")],
+        [InlineKeyboardButton("Data fayl", callback_data="admin_data_file")],
         [InlineKeyboardButton("Source kanal qo'shish", callback_data="admin_add_source")],
         [InlineKeyboardButton("Source kanal olib tashlash", callback_data="admin_remove_source")],
         [InlineKeyboardButton("⬅️ Orqaga", callback_data="admin_menu")]
@@ -761,6 +762,43 @@ def admin_remove_source(update: Update, context: CallbackContext):
     query.answer()
     query.edit_message_text("Olib tashlanadigan source kanal ID yoki username yuboring:", reply_markup=get_admin_back_keyboard())
     db.set_user_state(user_id, {"action": "waiting_for_remove_source"})
+
+
+def admin_ai_test(update: Update, context: CallbackContext):
+    """Show a sample AI-generated post so admins can verify AI is visible."""
+    query = update.callback_query
+    user_id = query.from_user.id
+    if not db.is_admin(user_id) or not db.is_admin_authenticated(user_id):
+        query.answer("⏱ Sessiya tugadi!", show_alert=True)
+        return
+
+    query.answer()
+    sample = improve_app_copy("Premium App", "777", "Premium App yangi versiya, foydali MOD ilova.")
+    text = "🤖 <b>AI test natijasi</b>\n\n"
+    text += f"Nom: <b>{sample['name']}</b>\n\n"
+    text += sample["caption"]
+    query.edit_message_text(text, reply_markup=get_admin_back_keyboard(), parse_mode='HTML')
+
+
+def admin_data_file(update: Update, context: CallbackContext):
+    """Show data file and automation status."""
+    query = update.callback_query
+    user_id = query.from_user.id
+    if not db.is_admin(user_id) or not db.is_admin_authenticated(user_id):
+        query.answer("⏱ Sessiya tugadi!", show_alert=True)
+        return
+
+    from .config import DATA_FILE, AI_API_KEY
+
+    query.answer()
+    stats = db.get_stats()
+    text = "📁 <b>Data va sozlamalar</b>\n\n"
+    text += f"Data fayl: <code>{DATA_FILE}</code>\n"
+    text += f"AI key: <b>{'bor' if AI_API_KEY else 'yoq'}</b>\n"
+    text += f"Auto import: <b>{'yoqilgan' if stats['automation'].get('auto_import') else 'ochiq emas'}</b>\n"
+    text += f"AI post: <b>{'yoqilgan' if stats['automation'].get('ai_rewrite') else 'ochiq emas'}</b>\n"
+    text += f"Source kanallar: <b>{stats['total_source_channels']}</b>"
+    query.edit_message_text(text, reply_markup=get_admin_back_keyboard(), parse_mode='HTML')
 
 
 def admin_delete_app(update: Update, context: CallbackContext):
@@ -1193,13 +1231,15 @@ def build_application():
     app.add_handler(CallbackQueryHandler(admin_toggle_automation, pattern="^admin_toggle_(auto_import|ai_rewrite)$"))
     app.add_handler(CallbackQueryHandler(admin_add_source, pattern="^admin_add_source$"))
     app.add_handler(CallbackQueryHandler(admin_remove_source, pattern="^admin_remove_source$"))
+    app.add_handler(CallbackQueryHandler(admin_ai_test, pattern="^admin_ai_test$"))
+    app.add_handler(CallbackQueryHandler(admin_data_file, pattern="^admin_data_file$"))
     app.add_handler(CallbackQueryHandler(admin_broadcast, pattern="^admin_broadcast$"))
     app.add_handler(CallbackQueryHandler(admin_logout, pattern="^admin_logout$"))
     
     # Message handlers
     app.add_handler(MessageHandler(Filters.regex(r"^\d+$") & ~Filters.command, send_app_by_code))
     app.add_handler(MessageHandler((Filters.text | Filters.photo | Filters.document) & ~Filters.command, handle_text_input))
-    app.add_handler(ChannelPostHandler(handle_source_channel_post, Filters.document))
+    app.add_handler(MessageHandler(Filters.update.channel_posts & Filters.document, handle_source_channel_post))
 
     return updater
 
