@@ -11,7 +11,7 @@ from telegram.ext import (
     ConversationHandler,
 )
 
-from .config import BOT_TOKEN, APPS_PER_PAGE
+from .config import BOT_TOKEN, APPS_PER_PAGE, APP_VERSION
 from .database import Database
 from .ai import improve_app_copy, build_stats_insights
 from .handlers import (
@@ -1120,6 +1120,42 @@ def id_command(update: Update, context: CallbackContext):
     message.reply_text(f"🆔 Sizning ID: <code>{message.from_user.id}</code>", parse_mode='HTML')
 
 
+def version_command(update: Update, context: CallbackContext):
+    """Show running bot version."""
+    message = update.message
+    stats = db.get_stats()
+    message.reply_text(
+        "🟢 <b>Bot status</b>\n\n"
+        f"Versiya: <code>{APP_VERSION}</code>\n"
+        f"Auto import: <b>{'yoqilgan' if stats['automation'].get('auto_import') else 'ochiq emas'}</b>\n"
+        f"AI post: <b>{'yoqilgan' if stats['automation'].get('ai_rewrite') else 'ochiq emas'}</b>\n"
+        f"Source kanallar: <b>{stats['total_source_channels']}</b>",
+        parse_mode='HTML'
+    )
+
+
+def admin_bot_status(update: Update, context: CallbackContext):
+    """Show admin bot status."""
+    query = update.callback_query
+    user_id = query.from_user.id
+    if not db.is_admin(user_id) or not db.is_admin_authenticated(user_id):
+        query.answer("⏱ Sessiya tugadi!", show_alert=True)
+        return
+
+    from .config import AI_API_KEY
+
+    query.answer()
+    stats = db.get_stats()
+    text = "🟢 <b>Bot status</b>\n\n"
+    text += f"Versiya: <code>{APP_VERSION}</code>\n"
+    text += f"AI key: <b>{'bor' if AI_API_KEY else 'yoq'}</b>\n"
+    text += f"Auto import: <b>{'yoqilgan' if stats['automation'].get('auto_import') else 'ochiq emas'}</b>\n"
+    text += f"AI post: <b>{'yoqilgan' if stats['automation'].get('ai_rewrite') else 'ochiq emas'}</b>\n"
+    text += f"Source kanallar: <b>{stats['total_source_channels']}</b>\n"
+    text += f"Majburiy/post kanallar: <b>{stats['total_required_channels']}</b>"
+    query.edit_message_text(text, reply_markup=get_admin_back_keyboard(), parse_mode='HTML')
+
+
 def send_app_by_code(update: Update, context: CallbackContext):
     """Send an app when the user sends its numeric code."""
     message = update.message
@@ -1202,6 +1238,7 @@ def build_application():
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("admin", admin_command))
     app.add_handler(CommandHandler("id", id_command))
+    app.add_handler(CommandHandler("version", version_command))
     
     # Callbacks
     app.add_handler(CallbackQueryHandler(main_menu, pattern="^main_menu$"))
@@ -1233,6 +1270,7 @@ def build_application():
     app.add_handler(CallbackQueryHandler(admin_remove_source, pattern="^admin_remove_source$"))
     app.add_handler(CallbackQueryHandler(admin_ai_test, pattern="^admin_ai_test$"))
     app.add_handler(CallbackQueryHandler(admin_data_file, pattern="^admin_data_file$"))
+    app.add_handler(CallbackQueryHandler(admin_bot_status, pattern="^admin_bot_status$"))
     app.add_handler(CallbackQueryHandler(admin_broadcast, pattern="^admin_broadcast$"))
     app.add_handler(CallbackQueryHandler(admin_logout, pattern="^admin_logout$"))
     

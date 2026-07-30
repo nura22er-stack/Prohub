@@ -49,6 +49,7 @@ def get_admin_menu_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton("📢 Majburiy kanallar", callback_data="admin_manage_channels")],
         [InlineKeyboardButton("🤖 Avtomat tizim", callback_data="admin_automation")],
         [InlineKeyboardButton("🤖 AI test", callback_data="admin_ai_test")],
+        [InlineKeyboardButton("🟢 Bot status", callback_data="admin_bot_status")],
         [InlineKeyboardButton("📢 Reklama yuborish", callback_data="admin_broadcast")],
         [InlineKeyboardButton("📁 Data fayl", callback_data="admin_data_file")],
         [InlineKeyboardButton("❌ Chiqish", callback_data="admin_logout")]

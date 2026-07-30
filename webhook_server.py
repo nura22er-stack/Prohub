@@ -7,7 +7,7 @@ import os
 from flask import Flask, jsonify, request
 from telegram import Update
 
-from bot.config import BOT_TOKEN
+from bot.config import BOT_TOKEN, APP_VERSION
 from bot.main import build_application
 
 
@@ -82,6 +82,7 @@ ensure_telegram_started()
 def index():
     return jsonify({
         "service": "ProHub Bot",
+        "version": APP_VERSION,
         "status": "ok",
         "mode": "webhook",
         "telegram_ready": telegram_updater is not None and telegram_error is None and bool(BOT_TOKEN),
@@ -95,6 +96,7 @@ def index():
 def health():
     return jsonify({
         "status": "ok",
+        "version": APP_VERSION,
         "telegram_ready": telegram_updater is not None and telegram_error is None and bool(BOT_TOKEN),
     })
 
